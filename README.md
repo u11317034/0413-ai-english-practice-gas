@@ -26,3 +26,6 @@
 ## 🛠️ 技術棧
 * 後端：Google Apps Script, Gemini API
 * 前端：HTML, CSS, Vanilla JavaScript, Web Speech API
+
+## 線上體驗網址：
+* https://script.google.com/macros/s/AKfycbxS9iexqb6BFfRmPGNnY5ohRDvE6pGuIPLendxDKL2Ntz6NeB3Luh2RU3ivx3ISMOoW2w/exec
