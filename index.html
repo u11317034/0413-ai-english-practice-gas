@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 20px; text-align: center; background: #f8f9fa; color: #202124; }
+    .card { background: white; padding: 35px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); max-width: 500px; margin: 20px auto; }
+    h2 { margin-bottom: 25px; color: #1a73e8; }
+    select { width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #e0e0e0; font-size: 16px; margin-bottom: 20px; appearance: none; background: #fff url('data:image/svg+xml;charset=US-ASCII,<svg%20width%3D"14"%20height%3D"14"%20xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg"><path%20d%3D"M1%204l6%206%206-6"%20stroke%3D"%23666"%20stroke-width%3D"2"%20fill%3D"none"%2F><%2Fsvg>') no-repeat right 15px center; }
+    button { padding: 15px 25px; margin: 8px; cursor: pointer; border-radius: 12px; border: none; font-weight: bold; font-size: 16px; transition: 0.2s; }
+    #startBtn { background: #1a73e8; color: white; width: 100%; margin-top: 10px; }
+    #startBtn:hover { background: #1557b0; }
+    .btn-tts { background: #f1f3f4; color: #5f6368; }
+    .btn-record { background: #34a853; color: white; }
+    .word-correct { color: #34a853; font-weight: 600; margin-right: 4px; }
+    .word-wrong { color: #ea4335; text-decoration: underline; margin-right: 4px; }
+    #status { margin-top: 20px; color: #70757a; font-size: 14px; height: 20px; }
+    #sentenceDisplay { font-size: 24px; margin: 30px 0; min-height: 80px; display: flex; align-items: center; justify-content: center; line-height: 1.4; padding: 0 10px; }
+    #levelBadge { display: inline-block; padding: 4px 12px; background: #e8f0fe; color: #1a73e8; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🗣️ AI 英語口說教練</h2>
+    <select id="themeSelect">
+      <option value="Daily Life and Small Talk">🏠 1. 日常生活與閒聊</option>
+      <option value="Airport and Travel Essentials">✈️ 2. 機場與旅遊必備</option>
+      <option value="Restaurant Ordering and Dining">🍴 3. 餐廳點餐與外食</option>
+      <option value="Shopping and Bargaining">🛍️ 4. 購物消費與殺價</option>
+      <option value="Workplace and Meetings">💼 5. 職場溝通與會議</option>
+      <option value="Doctor and Medical Health">🏥 6. 醫療看診與健康</option>
+      <option value="Hobbies and Leisure Activities">🏀 7. 興趣愛好與休閒</option>
+      <option value="Technology and Future Trends">💻 8. 科技發展與趨勢</option>
+      <option value="Socializing and Making Friends">🤝 9. 社交聚會與結交朋友</option>
+      <option value="Environmental Protection and Nature">🌱 10. 環境保護與大自然</option>
+    </select>
+    <button id="startBtn">開始生成主題練習</button>
+
+    <div id="quizContainer" style="display:none;">
+      <hr style="border:0; border-top:1px solid #eee; margin:25px 0;">
+      <div id="levelBadge"></div>
+      <div id="sentenceDisplay"></div>
+      
+      <button class="btn-tts" onclick="playTTS()">🔊 聽範例</button>
+      <button id="recordBtn" class="btn-record">🎤 開始跟讀</button>
+      
+      <div id="feedback" style="margin-top:25px; font-size:1.3em;"></div>
+      <button id="nextBtn" style="display:none; background:#202124; color:white;">下一題 ➡️</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    let sentences = [], currentIdx = 0;
+
+    document.getElementById('startBtn').onclick = () => {
+      const theme = document.getElementById('themeSelect').value;
+      const status = document.getElementById('status');
+      const startBtn = document.getElementById('startBtn');
+      
+      startBtn.disabled = true;
+      status.innerText = '正在請 Gemini 精心編寫題目...';
+      document.getElementById('quizContainer').style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(data => {
+          sentences = data; currentIdx = 0;
+          render();
+          document.getElementById('quizContainer').style.display = 'block';
+          status.innerText = '';
+          startBtn.disabled = false;
+        })
+        .withFailureHandler(err => {
+          alert("出題失敗: " + err.message);
+          status.innerText = '';
+          startBtn.disabled = false;
+        })
+        .getSentences(theme);
+    };
+
+    function render() {
+      document.getElementById('levelBadge').innerText = `LEVEL ${currentIdx + 1}`;
+      document.getElementById('sentenceDisplay').innerText = sentences[currentIdx];
+      document.getElementById('feedback').innerHTML = '';
+      document.getElementById('nextBtn').style.display = 'none';
+      document.getElementById('status').innerText = '';
+    }
+
+    function playTTS() {
+      const u = new SpeechSynthesisUtterance(sentences[currentIdx]);
+      u.lang = 'en-US';
+      u.rate = 0.9;
+      window.speechSynthesis.speak(u);
+    }
+
+    document.getElementById('recordBtn').onclick = () => {
+      const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Speech) return alert("瀏覽器不支援語音辨識");
+      const rec = new Speech();
+      rec.lang = 'en-US';
+      document.getElementById('status').innerText = '🎤 聽取中，請唸出句子...';
+
+      rec.onresult = (e) => {
+        const userSpeech = e.results[0][0].transcript.toLowerCase();
+        const targetWords = sentences[currentIdx].split(/\s+/);
+        let html = '';
+        targetWords.forEach(word => {
+          const cleanWord = word.toLowerCase().replace(/[.,!?;]/g, '');
+          if (userSpeech.includes(cleanWord)) {
+            html += `<span class="word-correct">${word}</span> `;
+          } else {
+            html += `<span class="word-wrong">${word}</span> `;
+          }
+        });
+        document.getElementById('feedback').innerHTML = html;
+        document.getElementById('status').innerText = '✅ 比對完成';
+        if (currentIdx < 4) document.getElementById('nextBtn').style.display = 'inline-block';
+        else document.getElementById('status').innerText = '🎉 太棒了！本單元練習結束！';
+      };
+      rec.onerror = (e) => { document.getElementById('status').innerText = '錯誤：' + e.error; };
+      rec.start();
+    };
+
+    document.getElementById('nextBtn').onclick = () => { currentIdx++; render(); };
+  </script>
+</body>
+</html>
